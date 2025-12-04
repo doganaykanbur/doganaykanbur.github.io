@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Terminal, Trophy, Clock, Play, RefreshCw, Zap } from 'lucide-react';
+import { X, Terminal, Trophy, Clock, Play, RefreshCw, Zap, Save, Globe } from 'lucide-react';
+import { db } from '../firebase';
+import { collection, addDoc, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
 const LEVELS = {
     1: {
@@ -22,6 +24,13 @@ interface GameModalProps {
     onClose: () => void;
 }
 
+interface HighScore {
+    id: string;
+    name: string;
+    score: number;
+    date: any;
+}
+
 export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [score, setScore] = useState(0);
@@ -33,6 +42,12 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
     const [gameState, setGameState] = useState<'idle' | 'playing' | 'finished'>('idle');
     const [commandsSolved, setCommandsSolved] = useState(0);
 
+    // Firebase States
+    const [playerName, setPlayerName] = useState("");
+    const [leaderboard, setLeaderboard] = useState<HighScore[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
+    const [showLeaderboard, setShowLeaderboard] = useState(false);
+
     const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -40,7 +55,40 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
         if (storedHighScore) {
             setHighScore(parseInt(storedHighScore));
         }
+        fetchLeaderboard();
     }, []);
+
+    const fetchLeaderboard = async () => {
+        try {
+            const q = query(collection(db, "scores"), orderBy("score", "desc"), limit(10));
+            const querySnapshot = await getDocs(q);
+            const scores: HighScore[] = [];
+            querySnapshot.forEach((doc) => {
+                scores.push({ id: doc.id, ...doc.data() } as HighScore);
+            });
+            setLeaderboard(scores);
+        } catch (error) {
+            console.error("Error fetching leaderboard: ", error);
+        }
+    };
+
+    const saveScore = async () => {
+        if (!playerName.trim()) return;
+        setIsSaving(true);
+        try {
+            await addDoc(collection(db, "scores"), {
+                name: playerName,
+                score: score,
+                date: new Date()
+            });
+            await fetchLeaderboard();
+            setShowLeaderboard(true);
+        } catch (error) {
+            console.error("Error adding document: ", error);
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     useEffect(() => {
         if (score > highScore) {
@@ -74,6 +122,7 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
         setIsPlaying(true);
         setGameState('playing');
         setUserInput("");
+        setShowLeaderboard(false);
         startLevel(1);
         setTimeout(() => inputRef.current?.focus(), 100);
     };
@@ -152,93 +201,154 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose }) => {
                                 <h2>Mini CLI Challenge</h2>
                             </div>
                             <div className="game-stats">
+                                <button
+                                    className="stat-item"
+                                    onClick={() => setShowLeaderboard(!showLeaderboard)}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                                >
+                                    <Globe size={18} className="text-accent" />
+                                    <span>Leaderboard</span>
+                                </button>
                                 <div className="stat-item">
                                     <Trophy size={18} className="text-yellow" />
-                                    <span>High Score: {highScore}</span>
+                                    <span>High: {highScore}</span>
                                 </div>
                             </div>
                         </div>
 
                         <div className="game-content">
-                            {gameState === 'idle' && (
-                                <div className="game-intro">
-                                    <p>Hacker modunu açmaya hazır mısın?</p>
-                                    <p className="game-instruction">
-                                        Komutları süre bitmeden yaz!<br />
-                                        Her 5 doğru komutta seviye artar ve süre kısalır.
-                                    </p>
-                                    <button className="btn btn-primary game-start-btn" onClick={startGame}>
-                                        <Play size={20} />
-                                        Oyunu Başlat
+                            {showLeaderboard ? (
+                                <div className="leaderboard-view" style={{ textAlign: 'center' }}>
+                                    <h3 style={{ marginBottom: '1.5rem', color: 'white' }}>Top Hackers</h3>
+                                    <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                        {leaderboard.map((entry, index) => (
+                                            <div key={entry.id} style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                padding: '0.5rem 1rem',
+                                                background: 'rgba(255,255,255,0.05)',
+                                                borderRadius: '0.5rem',
+                                                color: index === 0 ? '#fbbf24' : 'var(--text-secondary)'
+                                            }}>
+                                                <span>#{index + 1} {entry.name}</span>
+                                                <span>{entry.score}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button className="btn btn-secondary" onClick={() => setShowLeaderboard(false)} style={{ marginTop: '1.5rem' }}>
+                                        Geri Dön
                                     </button>
                                 </div>
-                            )}
-
-                            {gameState === 'playing' && (
-                                <div className="game-play-area">
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div className="game-timer">
-                                            <Clock size={20} />
-                                            <span style={{ color: timeLeft < 4 ? 'var(--error-color, #ef4444)' : 'inherit' }}>
-                                                {timeLeft}s
-                                            </span>
+                            ) : (
+                                <>
+                                    {gameState === 'idle' && (
+                                        <div className="game-intro">
+                                            <p>Hacker modunu açmaya hazır mısın?</p>
+                                            <p className="game-instruction">
+                                                Komutları süre bitmeden yaz!<br />
+                                                Her 5 doğru komutta seviye artar ve süre kısalır.
+                                            </p>
+                                            <button className="btn btn-primary game-start-btn" onClick={startGame}>
+                                                <Play size={20} />
+                                                Oyunu Başlat
+                                            </button>
                                         </div>
-                                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                            <div className="stat-item">
-                                                <Zap size={18} className="text-accent" />
-                                                <span>Level {level}</span>
+                                    )}
+
+                                    {gameState === 'playing' && (
+                                        <div className="game-play-area">
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div className="game-timer">
+                                                    <Clock size={20} />
+                                                    <span style={{ color: timeLeft < 4 ? 'var(--error-color, #ef4444)' : 'inherit' }}>
+                                                        {timeLeft}s
+                                                    </span>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                                    <div className="stat-item">
+                                                        <Zap size={18} className="text-accent" />
+                                                        <span>Level {level}</span>
+                                                    </div>
+                                                    <div className="game-score-display">
+                                                        Score: {score}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="game-score-display">
-                                                Score: {score}
+
+                                            <div className="command-display">
+                                                <span className="command-prompt">$</span>
+                                                <span className="command-text">{currentCommand}</span>
+                                            </div>
+
+                                            <div className="input-container">
+                                                <span className="input-prompt">{'>'}</span>
+                                                <input
+                                                    ref={inputRef}
+                                                    type="text"
+                                                    value={userInput}
+                                                    onChange={handleInputChange}
+                                                    className="game-input"
+                                                    placeholder="Komutu yaz..."
+                                                    autoFocus
+                                                    spellCheck={false}
+                                                />
+                                            </div>
+
+                                            <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                                                <motion.div
+                                                    initial={{ width: '100%' }}
+                                                    animate={{ width: `${(timeLeft / LEVELS[level as keyof typeof LEVELS].duration) * 100}%` }}
+                                                    transition={{ duration: 1, ease: "linear" }}
+                                                    style={{ height: '100%', background: 'var(--accent-color)' }}
+                                                />
                                             </div>
                                         </div>
-                                    </div>
+                                    )}
 
-                                    <div className="command-display">
-                                        <span className="command-prompt">$</span>
-                                        <span className="command-text">{currentCommand}</span>
-                                    </div>
+                                    {gameState === 'finished' && (
+                                        <div className="game-result">
+                                            <h3>Süre Doldu!</h3>
+                                            <div className="final-score">
+                                                <span>Skorun:</span>
+                                                <span className="score-value">{score}</span>
+                                            </div>
 
-                                    <div className="input-container">
-                                        <span className="input-prompt">{'>'}</span>
-                                        <input
-                                            ref={inputRef}
-                                            type="text"
-                                            value={userInput}
-                                            onChange={handleInputChange}
-                                            className="game-input"
-                                            placeholder="Komutu yaz..."
-                                            autoFocus
-                                            spellCheck={false}
-                                        />
-                                    </div>
+                                            <div style={{ margin: '1.5rem 0', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Adını yaz..."
+                                                    value={playerName}
+                                                    onChange={(e) => setPlayerName(e.target.value)}
+                                                    style={{
+                                                        background: 'rgba(255,255,255,0.1)',
+                                                        border: '1px solid rgba(255,255,255,0.2)',
+                                                        padding: '0.5rem 1rem',
+                                                        borderRadius: '0.5rem',
+                                                        color: 'white',
+                                                        outline: 'none'
+                                                    }}
+                                                />
+                                                <button
+                                                    className="btn btn-primary"
+                                                    onClick={saveScore}
+                                                    disabled={isSaving || !playerName}
+                                                    style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
+                                                >
+                                                    <Save size={16} />
+                                                    {isSaving ? '...' : 'Kaydet'}
+                                                </button>
+                                            </div>
 
-                                    <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
-                                        <motion.div
-                                            initial={{ width: '100%' }}
-                                            animate={{ width: `${(timeLeft / LEVELS[level as keyof typeof LEVELS].duration) * 100}%` }}
-                                            transition={{ duration: 1, ease: "linear" }}
-                                            style={{ height: '100%', background: 'var(--accent-color)' }}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {gameState === 'finished' && (
-                                <div className="game-result">
-                                    <h3>Süre Doldu!</h3>
-                                    <div className="final-score">
-                                        <span>Skorun:</span>
-                                        <span className="score-value">{score}</span>
-                                    </div>
-                                    <div style={{ marginBottom: '2rem', color: 'var(--text-secondary)' }}>
-                                        Level {level} • {commandsSolved} Komut
-                                    </div>
-                                    <button className="btn btn-primary game-restart-btn" onClick={startGame}>
-                                        <RefreshCw size={20} />
-                                        Tekrar Dene
-                                    </button>
-                                </div>
+                                            <div style={{ marginBottom: '2rem', color: 'var(--text-secondary)' }}>
+                                                Level {level} • {commandsSolved} Komut
+                                            </div>
+                                            <button className="btn btn-secondary game-restart-btn" onClick={startGame}>
+                                                <RefreshCw size={20} />
+                                                Tekrar Dene
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </motion.div>

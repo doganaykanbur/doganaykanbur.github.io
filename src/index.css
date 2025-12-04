@@ -817,9 +817,9 @@ button {
   position: fixed;
   bottom: 2rem;
   left: 2rem;
-  background: rgba(30, 30, 30, 0.8);
+  background: rgba(15, 15, 15, 0.9);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.3);
   color: var(--accent-color);
   width: 3.5rem;
   height: 3.5rem;
@@ -830,14 +830,50 @@ button {
   cursor: pointer;
   z-index: 100;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+  overflow: hidden;
+}
+
+.game-trigger::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, transparent 70%);
+  transform: rotate(0deg);
+  animation: neon-glide 6s linear infinite;
+  pointer-events: none;
 }
 
 .game-trigger:hover {
-  transform: scale(1.1) rotate(10deg);
-  background: var(--accent-color);
+  transform: scale(1.1);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.6);
   color: white;
-  box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+}
+
+@keyframes neon-glide {
+  0% {
+    transform: translate(-30%, -30%) rotate(0deg);
+  }
+
+  25% {
+    transform: translate(30%, -30%) rotate(90deg);
+  }
+
+  50% {
+    transform: translate(30%, 30%) rotate(180deg);
+  }
+
+  75% {
+    transform: translate(-30%, 30%) rotate(270deg);
+  }
+
+  100% {
+    transform: translate(-30%, -30%) rotate(360deg);
+  }
 }
 
 .text-accent {
