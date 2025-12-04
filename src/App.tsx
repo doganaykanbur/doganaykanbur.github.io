@@ -8,7 +8,6 @@ import { Contact } from './components/Contact';
 import { Footer } from './components/Footer';
 import { GameModal } from './components/GameModal';
 import { CrashOverlay } from './components/CrashOverlay';
-import { Terminal } from 'lucide-react';
 
 function App() {
   const [isGameOpen, setIsGameOpen] = useState(false);
@@ -28,7 +27,7 @@ function App() {
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-color)', color: 'white' }}>
       {isCrashed && <CrashOverlay onRepair={handleRepair} />}
 
-      <Navbar />
+      <Navbar onOpenTerminal={() => setIsGameOpen(true)} />
       <main>
         <Hero />
         <Projects />
@@ -37,15 +36,6 @@ function App() {
         <Contact />
       </main>
       <Footer />
-
-      {/* Game Trigger */}
-      <button
-        className="game-trigger"
-        onClick={() => setIsGameOpen(true)}
-        aria-label="Open CLI Game"
-      >
-        <Terminal size={24} />
-      </button>
 
       <GameModal
         isOpen={isGameOpen}

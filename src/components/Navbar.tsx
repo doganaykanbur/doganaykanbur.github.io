@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Terminal } from 'lucide-react';
 
 const navLinks = [
     { name: 'Projeler', href: '#projects' },
     { name: 'Yetenekler', href: '#skills' },
     { name: 'Hakkımda', href: '#about' },
-    { name: 'İletişim', href: '#contact' },
 ];
 
-export const Navbar: React.FC = () => {
+interface NavbarProps {
+    onOpenTerminal: () => void;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ onOpenTerminal }) => {
     const [isScrolled, setIsScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -35,18 +38,35 @@ export const Navbar: React.FC = () => {
                             {link.name}
                         </a>
                     ))}
+                    <button
+                        className="nav-terminal-btn"
+                        onClick={onOpenTerminal}
+                        aria-label="Open Terminal"
+                        title="System Access"
+                    >
+                        <Terminal size={18} />
+                    </button>
                     <a href="#contact" className="btn btn-primary" style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}>
                         İletişime Geç
                     </a>
                 </div>
 
                 {/* Mobile Menu Button */}
-                <button
-                    className="mobile-menu-btn"
-                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                >
-                    {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <button
+                        className="nav-terminal-btn mobile-only"
+                        onClick={onOpenTerminal}
+                        aria-label="Open Terminal"
+                    >
+                        <Terminal size={20} />
+                    </button>
+                    <button
+                        className="mobile-menu-btn"
+                        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                    >
+                        {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                    </button>
+                </div>
             </div>
 
             {/* Mobile Menu Overlay */}

@@ -41,12 +41,12 @@ export const CrashOverlay: React.FC<CrashOverlayProps> = ({ onRepair }) => {
                     <Skull size={120} color="#ef4444" strokeWidth={1.5} />
                 </motion.div>
 
-                <h2 className="crash-title">SİSTEM ÇÖKTÜ</h2>
-                <p className="crash-subtitle">İllegal işlem tespit edildi.</p>
+                <h2 className="crash-title" data-text="GÜVENLİK DUVARI AŞILDI">GÜVENLİK DUVARI AŞILDI</h2>
+                <p className="crash-subtitle">Sistem bütünlüğü bozuldu. Acil onarım gerekiyor.</p>
 
                 <div className="slider-container">
                     <div className="slider-track">
-                        <span className="slider-text" style={{ opacity: 1 - sliderValue / 100 }}>
+                        <span className="slider-text" style={{ opacity: Math.max(0.3, 1 - sliderValue / 50) }}>
                             Sistemi Onarmak İçin Kaydır
                         </span>
                     </div>
@@ -56,7 +56,7 @@ export const CrashOverlay: React.FC<CrashOverlayProps> = ({ onRepair }) => {
                             left: `calc(${sliderValue}% - ${sliderValue * 0.5}px)`
                         }}
                     >
-                        <ChevronRight size={24} color="#000" />
+                        <ChevronRight size={24} color="#fff" />
                     </div>
                     <input
                         type="range"
