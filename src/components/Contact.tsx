@@ -12,14 +12,19 @@ export const Contact: React.FC = () => {
                     Aktif olarak staj ve iş fırsatlarını değerlendiriyorum. Projeler, iş birlikleri veya sorularınız için benimle iletişime geçebilirsiniz.
                 </p>
 
-                <a
-                    href="mailto:kanburdoganay@gmail.com"
-                    className="btn btn-primary"
-                    style={{ padding: '1rem 2rem', fontSize: '1.125rem' }}
-                >
-                    <Mail size={20} />
-                    Merhaba De
-                </a>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                    <a
+                        href="mailto:kanburdoganay@gmail.com"
+                        className="btn btn-primary"
+                        style={{ padding: '1rem 2rem', fontSize: '1.125rem' }}
+                    >
+                        <Mail size={20} />
+                        Merhaba De
+                    </a>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                        kanburdoganay@gmail.com
+                    </p>
+                </div>
 
                 <div className="contact-socials">
                     {[
