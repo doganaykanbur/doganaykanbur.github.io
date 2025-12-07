@@ -18,7 +18,6 @@ export const About: React.FC = () => {
                         <div>
                             <p>{about.paragraph1}</p>
                             <p>{about.paragraph2}</p>
-                            <p>{about.paragraph3}</p>
                         </div>
                     </motion.div>
 
@@ -29,12 +28,7 @@ export const About: React.FC = () => {
                         transition={{ duration: 0.8 }}
                         style={{ position: 'relative' }}
                     >
-                        <div className="about-visual">
-                            <div style={{ textAlign: 'center', padding: '2rem' }}>
-                                <span style={{ fontSize: '4rem', display: 'block', marginBottom: '1rem' }}>👨‍💻</span>
-                                <p style={{ color: 'var(--text-secondary)', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Developer</p>
-                            </div>
-                        </div>
+
                         {/* Decorative elements */}
                         <div style={{ position: 'absolute', zIndex: -1, top: '2.5rem', right: '-2.5rem', width: '100%', height: '100%', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '1rem' }} />
                         <div style={{ position: 'absolute', zIndex: -1, bottom: '-2.5rem', left: '-2.5rem', width: '100%', height: '100%', border: '1px solid rgba(168, 85, 247, 0.3)', borderRadius: '1rem' }} />

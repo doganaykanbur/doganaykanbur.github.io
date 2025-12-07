@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mail, Github, Linkedin, Twitter } from 'lucide-react';
+import { Mail, Github, Linkedin } from 'lucide-react';
 
 export const Contact: React.FC = () => {
     return (
@@ -9,8 +9,7 @@ export const Contact: React.FC = () => {
             <div className="container" style={{ position: 'relative', zIndex: 10 }}>
                 <h2 style={{ fontSize: '3rem', marginBottom: '2rem' }}>Birlikte Çalışalım</h2>
                 <p style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', marginBottom: '3rem', maxWidth: '600px', marginInline: 'auto' }}>
-                    Şu anda staj fırsatlarını değerlendiriyorum. Bir sorunuz varsa veya sadece merhaba demek isterseniz,
-                    size en kısa sürede dönüş yapmaya çalışacağım!
+                    Aktif olarak staj ve iş fırsatlarını değerlendiriyorum. Projeler, iş birlikleri veya sorularınız için benimle iletişime geçebilirsiniz.
                 </p>
 
                 <a
@@ -24,9 +23,8 @@ export const Contact: React.FC = () => {
 
                 <div className="contact-socials">
                     {[
-                        { icon: Github, href: "https://github.com" },
-                        { icon: Linkedin, href: "https://linkedin.com" },
-                        { icon: Twitter, href: "https://twitter.com" },
+                        { icon: Github, href: "https://github.com/doganaykanbur" },
+                        { icon: Linkedin, href: "https://www.linkedin.com/in/do%C4%9Fanay-kanbur-412b58253/" },
                     ].map((item, index) => (
                         <a
                             key={index}

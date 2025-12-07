@@ -50,10 +50,10 @@ export const Hero: React.FC = () => {
                         transition={{ duration: 0.6, delay: 0.4 }}
                         className="hero-socials"
                     >
-                        <a href="https://github.com" target="_blank" rel="noopener noreferrer">
+                        <a href="https://github.com/doganaykanbur" target="_blank" rel="noopener noreferrer">
                             <Github size={24} />
                         </a>
-                        <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">
+                        <a href="https://www.linkedin.com/in/do%C4%9Fanay-kanbur-412b58253/" target="_blank" rel="noopener noreferrer">
                             <Linkedin size={24} />
                         </a>
                     </motion.div>
