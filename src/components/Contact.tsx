@@ -13,7 +13,7 @@ export const Contact: React.FC = () => {
                 </p>
 
                 <a
-                    href="mailto:hello@example.com"
+                    href="mailto:kanburdoganay@gmail.com"
                     className="btn btn-primary"
                     style={{ padding: '1rem 2rem', fontSize: '1.125rem' }}
                 >
