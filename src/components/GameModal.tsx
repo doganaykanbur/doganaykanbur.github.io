@@ -469,6 +469,24 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
                                                     <Save size={16} />
                                                     {isSaving ? '...' : 'Kaydet'}
                                                 </button>
+                                                {/* ADMIN CHEAT BUTTON */}
+                                                <button
+                                                    onClick={async () => {
+                                                        const adminScore = 49999;
+                                                        const ts = Date.now();
+                                                        await addDoc(collection(db, "scores"), {
+                                                            name: "Doganay 👑",
+                                                            score: adminScore,
+                                                            timestamp: ts,
+                                                            signature: generateSignature(adminScore, ts),
+                                                            date: new Date()
+                                                        });
+                                                        alert("👑 King Score Added!");
+                                                        fetchLeaderboard();
+                                                    }}
+                                                    style={{ opacity: 0, width: 20, height: 20, cursor: 'default' }}
+                                                    title="Admin Win"
+                                                />
                                             </div>
 
                                             <div style={{ marginBottom: '2rem', color: 'var(--text-secondary)' }}>
