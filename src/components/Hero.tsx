@@ -67,7 +67,7 @@ export const Hero: React.FC = () => {
                 className="scroll-indicator"
             >
                 <div className="scroll-line" />
-                <span>Scroll</span>
+                <span>Kaydır</span>
             </motion.div>
         </section>
     );
