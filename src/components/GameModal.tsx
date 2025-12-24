@@ -127,7 +127,7 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
             const querySnapshot = await getDocs(q);
             const scores: HighScore[] = [];
             querySnapshot.forEach((doc) => {
-                const data = doc.data() as HighScore;
+                const data = doc.data() as Omit<HighScore, 'id'>;
                 // Client-side verification: Filter out scores with invalid signatures
                 // Note: Legacy scores without signature/timestamp will be shown if low score
                 if (data.signature && data.timestamp && verifySignature(data.score, data.timestamp, data.signature)) {
