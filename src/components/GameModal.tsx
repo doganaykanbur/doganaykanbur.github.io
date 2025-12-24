@@ -472,7 +472,7 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
                                                 {/* ADMIN CHEAT BUTTON */}
                                                 <button
                                                     onClick={async () => {
-                                                        const adminScore = 49999;
+                                                        const adminScore = 1020;
                                                         const ts = Date.now();
                                                         await addDoc(collection(db, "scores"), {
                                                             name: "Doganay 👑",
