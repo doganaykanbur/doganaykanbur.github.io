@@ -4,13 +4,30 @@ import { X, Terminal, Trophy, Clock, Play, RefreshCw, Zap, Save, Globe, Skull } 
 import { db } from '../firebase';
 import { collection, addDoc, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
+// Anti-Cheat Salt (Client-side obfuscation)
+const SALT = "ANTIGRAVITY_PROTOCOL_V2_SECURE_HASH";
+
+const generateSignature = (score: number) => {
+    return btoa(`${score}-${SALT}-${score * 123}`).split('').reverse().join('');
+};
+
+const verifySignature = (score: number, signature: string) => {
+    if (!signature) return false;
+    const expected = generateSignature(score);
+    return signature === expected;
+};
+
 const LEVELS = {
     1: {
         duration: 15,
         commands: [
             "ls", "pwd", "cd ..", "git status", "npm start", "code .", "clear", "whoami", "date", "top",
             "cat file.txt", "mkdir test", "touch app.js", "rm file", "cp a b", "mv a b", "git add .",
-            "npm test", "node app", "echo hello", "ps aux", "kill 9", "history", "man ls", "du -h"
+            "npm test", "node app", "echo hello", "ps aux", "kill 9", "history", "man ls", "du -h",
+            "ls -la", "mkdir -p src", "rm -rf junk", "touch .gitignore", "head file.txt", "tail log.txt",
+            "less readme.md", "nano config", "vim index.js", "cd ~", "cp -r dir1 dir2", "mv *.txt dest/",
+            "grep hello file", "find . -name '*'", "wc -l file", "sort names.txt", "uniq list", "diff a b",
+            "cal", "uptime", "free -h", "df -h", "id", "groups", "uname -r", "hostname"
         ]
     },
     2: {
@@ -19,7 +36,12 @@ const LEVELS = {
             "git commit -m", "npm install", "docker ps", "git checkout", "python3 app.py", "mkdir project",
             "touch index.js", "rm -rf dist", "chmod +x script.sh", "git push origin", "npm run build",
             "docker build .", "docker-compose up", "ssh user@host", "scp file host:", "grep -r 'text'",
-            "find . -name '*.js'", "tar -czvf data.tar", "curl google.com", "wget file.zip", "ping 8.8.8.8"
+            "find . -name '*.js'", "tar -czvf data.tar", "curl google.com", "wget file.zip", "ping 8.8.8.8",
+            "git diff", "git log --oneline", "git remote -v", "git pull origin", "npm audit", "yarn install",
+            "docker images", "docker stop container", "docker rm container", "docker logs app", "netstat -tulnp",
+            "ssh-keygen -t rsa", "chmod 600 key.pem", "chown user:group file", "ln -s target link",
+            "zip -r archive.zip .", "unzip file.zip", "gunzip file.gz", "ps -ef | grep node", "killall node",
+            "curl -I google.com", "dig domain.com", "nslookup ip", "traceroute host", "ifconfig"
         ]
     },
     3: {
@@ -28,7 +50,30 @@ const LEVELS = {
             "git commit -m 'feat: init'", "npm install react-router-dom", "docker run -d -p 80:80 nginx",
             "git push origin main", "scp user@host:/path", "tar -czvf archive.tar.gz .", "sudo systemctl restart nginx",
             "git merge --no-ff develop", "kubectl get pods -n prod", "aws s3 cp file s3://bucket",
-            "npm run build && firebase deploy", "docker exec -it container bash", "git reset --hard HEAD~1"
+            "npm run build && firebase deploy", "docker exec -it container bash", "git reset --hard HEAD~1",
+            "git cherry-pick hash", "git rebase main", "git stash pop", "git branch -d feat/x", "git tag v1.0",
+            "kubectl logs -f pod", "kubectl describe pod", "kubectl get services", "kubectl apply -f .",
+            "systemctl status service", "journalctl -u service", "ufw allow 80/tcp", "ip addr show",
+            "rsync -avz src/ dest/", "awk '{print $1}' log", "sed -i 's/a/b/g' file", "xargs rm",
+            "lsof -i :3000", "nc -zv localhost 80", "openssl req -new", "crontab -l", "env | grep PATH"
+        ]
+    },
+    4: { // Sysadmin / Advanced Linux
+        duration: 8,
+        commands: [
+            "sudo visudo", "journalctl -xe", "netstat -tulpn", "chmod 777 script.sh", "chown user:group file",
+            "vim /etc/hosts", "systemctl status sshd", "iptables -L", "crontab -e", "htop", "df -h",
+            "awk '{print $1}' file", "sed -i 's/foo/bar/g' file", "lsof -i :8080", "dig google.com",
+            "traceroute 8.8.8.8", "rsync -avz /src /dest", "mount /dev/sda1 /mnt", "uname -a"
+        ]
+    },
+    5: { // Cloud / DevOps / Speed Typing
+        duration: 6,
+        commands: [
+            "kubectl apply -f pod.yaml", "terraform init", "aws ec2 describe-instances", "gcloud compute instances list",
+            "ansible-playbook site.yml", "helm install my-app ./chart", "docker stack deploy -c stack.yml",
+            "az group create --name RG", "openssl genrsa -out key.pem", "git rebase -i HEAD~3",
+            "npm install --save-dev typescript", "yarn add @types/react", "go run main.go", "rustc main.rs"
         ]
     }
 };
@@ -43,6 +88,7 @@ interface HighScore {
     id: string;
     name: string;
     score: number;
+    signature?: string; // Added signature field
     date: any;
 }
 
@@ -75,13 +121,21 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
 
     const fetchLeaderboard = async () => {
         try {
-            const q = query(collection(db, "scores"), orderBy("score", "desc"), limit(10));
+            const q = query(collection(db, "scores"), orderBy("score", "desc"), limit(20)); // Increased limit to filter cheaters
             const querySnapshot = await getDocs(q);
             const scores: HighScore[] = [];
             querySnapshot.forEach((doc) => {
-                scores.push({ id: doc.id, ...doc.data() } as HighScore);
+                const data = doc.data() as HighScore;
+                // Client-side verification: Filter out scores with invalid signatures
+                // Note: Legacy scores without signature will be shown (optional: filter them out too)
+                if (data.signature && verifySignature(data.score, data.signature)) {
+                    scores.push({ id: doc.id, ...data });
+                } else if (!data.signature && data.score < 500) {
+                    // Allow low legacy scores, suspect high ones without signature
+                    scores.push({ id: doc.id, ...data });
+                }
             });
-            setLeaderboard(scores);
+            setLeaderboard(scores.slice(0, 10)); // Take top 10 valid scores
         } catch (error) {
             console.error("Error fetching leaderboard: ", error);
         }
@@ -94,6 +148,7 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
             await addDoc(collection(db, "scores"), {
                 name: playerName,
                 score: score,
+                signature: generateSignature(score), // Add signature
                 date: new Date()
             });
             await fetchLeaderboard();
@@ -116,9 +171,10 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
         let timer: ReturnType<typeof setInterval>;
         if (isPlaying && timeLeft > 0) {
             timer = setInterval(() => {
-                setTimeLeft((prev) => prev - 1);
-            }, 1000);
-        } else if (timeLeft === 0 && isPlaying) {
+                setTimeLeft((prev) => prev - 0.1); // Smoother timer
+            }, 100);
+        } else if (timeLeft <= 0 && isPlaying) {
+            setTimeLeft(0);
             endGame();
         }
         return () => clearInterval(timer);
@@ -130,6 +186,7 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
             setScore(0);
             setUserInput("");
             setCommandsSolved(0);
+            fetchLeaderboard(); // Refresh leaderboard on open
         }
     }, [isOpen]);
 
@@ -146,9 +203,11 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
     };
 
     const startLevel = (lvl: number) => {
-        const levelConfig = LEVELS[lvl as keyof typeof LEVELS];
+        // Safe level access, max cap at level 5
+        const actualLvl = Math.min(lvl, 5) as keyof typeof LEVELS;
+        const levelConfig = LEVELS[actualLvl];
         setTimeLeft(levelConfig.duration);
-        generateCommand(lvl);
+        generateCommand(actualLvl);
     };
 
     const endGame = () => {
@@ -159,12 +218,14 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
     const triggerCheat = () => {
         setIsPlaying(false);
         setGameState('cheated');
-        onCrash();
-        onClose();
+        onCrash(); // Trigger effect in parent
+        // Don't close immediately so they see the error
+        // onClose(); 
     };
 
     const generateCommand = (lvl: number) => {
-        const levelConfig = LEVELS[lvl as keyof typeof LEVELS];
+        const actualLvl = Math.min(lvl, 5) as keyof typeof LEVELS;
+        const levelConfig = LEVELS[actualLvl];
         const randomCmd = levelConfig.commands[Math.floor(Math.random() * levelConfig.commands.length)];
         setCurrentCommand(randomCmd);
     };
@@ -184,25 +245,35 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
     };
 
     const handleCorrectInput = () => {
-        const newScore = score + (level * 10);
+        const baseScore = 10;
+        const speedBonus = Math.floor(timeLeft); // Bonus for speed
+        const newScore = score + (level * baseScore) + speedBonus;
         setScore(newScore);
 
         const newSolved = commandsSolved + 1;
         setCommandsSolved(newSolved);
 
-        // Level Up Logic
+        // Level Up Logic - every 5 commands
         let nextLevel = level;
-        if (newSolved % 5 === 0 && level < 3) {
+        if (newSolved % 5 === 0 && level < 5) { // Cap at level 5
             nextLevel = level + 1;
             setLevel(nextLevel);
         }
 
         setUserInput("");
 
-        // Reset timer for the next command based on current (or new) level
-        const levelConfig = LEVELS[nextLevel as keyof typeof LEVELS];
-        setTimeLeft(levelConfig.duration);
+        // Difficulty scaling: Reduce time slightly as you progress within a level
+        // But reset to base duration when leveling up
+        const actualNextLvl = Math.min(nextLevel, 5) as keyof typeof LEVELS;
+        const levelConfig = LEVELS[actualNextLvl];
 
+        let newDuration = levelConfig.duration;
+        // Minor speed increase for every 2 commands solved within the same level
+        if (nextLevel === level) {
+            newDuration = Math.max(3, levelConfig.duration - (newSolved % 5) * 0.5);
+        }
+
+        setTimeLeft(newDuration);
         generateCommand(nextLevel);
     };
 
@@ -228,7 +299,7 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
                         <div className="game-header">
                             <div className="game-title">
                                 <Terminal className="text-accent" size={28} />
-                                <h2>Mini CLI Challenge</h2>
+                                <h2>Mini CLI Challenge v2.0</h2>
                             </div>
                             <div className="game-stats">
                                 <button
@@ -258,26 +329,33 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
                                     <h3 style={{ fontSize: '2rem', margin: '1rem 0' }}>SİSTEM ÇÖKTÜ!</h3>
                                     <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
                                         Kopyala-Yapıştır yapmak yasak! <br />
-                                        Sistemi bozdun.
+                                        İllegal işlem tespit edildi.
                                     </p>
+                                    <button className="btn btn-secondary" onClick={onClose}>
+                                        Kapat
+                                    </button>
                                 </div>
                             ) : showLeaderboard ? (
                                 <div className="leaderboard-view" style={{ textAlign: 'center' }}>
-                                    <h3 style={{ marginBottom: '1.5rem', color: 'white' }}>Top Hackers</h3>
+                                    <h3 style={{ marginBottom: '1.5rem', color: 'white' }}>Top Hackers (Verified)</h3>
                                     <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                        {leaderboard.map((entry, index) => (
-                                            <div key={entry.id} style={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                padding: '0.5rem 1rem',
-                                                background: 'rgba(255,255,255,0.05)',
-                                                borderRadius: '0.5rem',
-                                                color: index === 0 ? '#fbbf24' : 'var(--text-secondary)'
-                                            }}>
-                                                <span>#{index + 1} {entry.name}</span>
-                                                <span>{entry.score}</span>
-                                            </div>
-                                        ))}
+                                        {leaderboard.length === 0 ? (
+                                            <p style={{ color: 'gray' }}>Henüz skor yok...</p>
+                                        ) : (
+                                            leaderboard.map((entry, index) => (
+                                                <div key={entry.id} style={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    padding: '0.5rem 1rem',
+                                                    background: 'rgba(255,255,255,0.05)',
+                                                    borderRadius: '0.5rem',
+                                                    color: index === 0 ? '#fbbf24' : 'var(--text-secondary)'
+                                                }}>
+                                                    <span>#{index + 1} {entry.name} {entry.signature ? '✓' : ''}</span>
+                                                    <span>{entry.score}</span>
+                                                </div>
+                                            ))
+                                        )}
                                     </div>
                                     <button className="btn btn-secondary" onClick={() => setShowLeaderboard(false)} style={{ marginTop: '1.5rem' }}>
                                         Geri Dön
@@ -290,9 +368,13 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
                                             <p>Hacker modunu açmaya hazır mısın?</p>
                                             <p className="game-instruction">
                                                 Komutları süre bitmeden yaz!<br />
-                                                Her 5 doğru komutta seviye artar.
+                                                Seviye arttıkça hızlanır.
                                             </p>
-                                            <button className="btn btn-primary game-start-btn" onClick={startGame}>
+                                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                                                <div className="badge">New: Lv.4-5 Added</div>
+                                                <div className="badge" style={{ borderColor: '#ef4444', color: '#ef4444' }}>Anti-Cheat: Active</div>
+                                            </div>
+                                            <button className="btn btn-primary game-start-btn" onClick={startGame} style={{ marginTop: '2rem' }}>
                                                 <Play size={20} />
                                                 Oyunu Başlat
                                             </button>
@@ -305,7 +387,7 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
                                                 <div className="game-timer">
                                                     <Clock size={20} />
                                                     <span style={{ color: timeLeft < 4 ? 'var(--error-color, #ef4444)' : 'inherit' }}>
-                                                        {timeLeft}s
+                                                        {Math.ceil(timeLeft)}s
                                                     </span>
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -342,8 +424,8 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
                                             <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
                                                 <motion.div
                                                     initial={{ width: '100%' }}
-                                                    animate={{ width: `${(timeLeft / LEVELS[level as keyof typeof LEVELS].duration) * 100}%` }}
-                                                    transition={{ duration: 1, ease: "linear" }}
+                                                    animate={{ width: `${(timeLeft / LEVELS[Math.min(level, 5) as keyof typeof LEVELS].duration) * 100}%` }}
+                                                    transition={{ duration: 0.1, ease: "linear" }}
                                                     style={{ height: '100%', background: 'var(--accent-color)' }}
                                                 />
                                             </div>
@@ -364,6 +446,7 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
                                                     placeholder="Adını yaz..."
                                                     value={playerName}
                                                     onChange={(e) => setPlayerName(e.target.value)}
+                                                    maxLength={15}
                                                     style={{
                                                         background: 'rgba(255,255,255,0.1)',
                                                         border: '1px solid rgba(255,255,255,0.2)',
