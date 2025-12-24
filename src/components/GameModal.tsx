@@ -7,13 +7,14 @@ import { collection, addDoc, query, orderBy, limit, getDocs } from 'firebase/fir
 // Anti-Cheat Salt (Client-side obfuscation)
 const SALT = "ANTIGRAVITY_PROTOCOL_V2_SECURE_HASH";
 
-const generateSignature = (score: number) => {
-    return btoa(`${score}-${SALT}-${score * 123}`).split('').reverse().join('');
+const generateSignature = (score: number, timestamp: number) => {
+    // Include timestamp in hash to prevent replay attacks
+    return btoa(`${score}-${timestamp}-${SALT}-${score * 123}`).split('').reverse().join('');
 };
 
-const verifySignature = (score: number, signature: string) => {
-    if (!signature) return false;
-    const expected = generateSignature(score);
+const verifySignature = (score: number, timestamp: number, signature: string) => {
+    if (!signature || !timestamp) return false;
+    const expected = generateSignature(score, timestamp);
     return signature === expected;
 };
 
@@ -88,7 +89,8 @@ interface HighScore {
     id: string;
     name: string;
     score: number;
-    signature?: string; // Added signature field
+    signature?: string;
+    timestamp?: number; // Added timestamp
     date: any;
 }
 
@@ -127,8 +129,8 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
             querySnapshot.forEach((doc) => {
                 const data = doc.data() as HighScore;
                 // Client-side verification: Filter out scores with invalid signatures
-                // Note: Legacy scores without signature will be shown (optional: filter them out too)
-                if (data.signature && verifySignature(data.score, data.signature)) {
+                // Note: Legacy scores without signature/timestamp will be shown if low score
+                if (data.signature && data.timestamp && verifySignature(data.score, data.timestamp, data.signature)) {
                     scores.push({ id: doc.id, ...data });
                 } else if (!data.signature && data.score < 500) {
                     // Allow low legacy scores, suspect high ones without signature
@@ -145,10 +147,12 @@ export const GameModal: React.FC<GameModalProps> = ({ isOpen, onClose, onCrash }
         if (!playerName.trim()) return;
         setIsSaving(true);
         try {
+            const timestamp = Date.now();
             await addDoc(collection(db, "scores"), {
                 name: playerName,
                 score: score,
-                signature: generateSignature(score), // Add signature
+                timestamp: timestamp, // Send timestamp
+                signature: generateSignature(score, timestamp), // Sign with timestamp
                 date: new Date()
             });
             await fetchLeaderboard();

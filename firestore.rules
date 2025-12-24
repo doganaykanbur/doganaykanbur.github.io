@@ -6,16 +6,24 @@ service cloud.firestore {
       allow read: if true;
 
       // Only allow creating a score if:
-      // 1. Data types are correct (score is number, name/signature are strings)
+      // 1. Data types are correct (score is number, timestamp is number, signature is string)
       // 2. Name is not empty and not too long
-      // 3. Signature field is present (enforces our client-side anti-cheat structure)
-      // 4. Score is not obscenely high (sanity check, e.g. < 50000)
+      // 3. Signature field is present
+      // 4. Timestamp is RECENT (Replay Attack Protection)
+      //    - Must be within the last 60 seconds
+      //    - Allows 5 seconds of future drift (clock skew)
       allow create: if request.resource.data.score is number
                     && request.resource.data.name is string
                     && request.resource.data.name.size() > 0
                     && request.resource.data.name.size() <= 15
                     && request.resource.data.signature is string
-                    && request.resource.data.score < 50000;
+                    && request.resource.data.timestamp is number
+                    && request.resource.data.score < 50000
+                    // REPLAY PROTECTION:
+                    // Current server time - Sent time < 60 seconds (60000 ms)
+                    && (request.time.toMillis() - request.resource.data.timestamp) < 60000
+                    // Allow small future clock skew (5 seconds)
+                    && (request.time.toMillis() - request.resource.data.timestamp) > -5000;
 
       // Scores are permanent (no update or delete allowed by public clients)
       allow update, delete: if false;
